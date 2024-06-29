@@ -10,6 +10,6 @@ func main() {
 	server := &Server{
 		ChoreStorage: sql,
 	}
-	http.ListenAndServe(":8080", server.GetHandler())
-	println("Hello, World!")
+	http.ListenAndServe(":8081", server.GetHandler())
+	
 }

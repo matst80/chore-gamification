@@ -24,6 +24,19 @@ func (s *Server) ListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) TodoListHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	items, err := s.ChoreStorage.ListTodo()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := json.NewEncoder(w).Encode(items); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 func (s *Server) ItemHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	id, err := getId(r)
@@ -40,10 +53,11 @@ func (s *Server) ItemHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	//w.WriteHeader(http.StatusAccepted)
 }
 
 func (s *Server) CreateHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+	//w.Header().Set("Content-Type", "application/json")
 	var item Chore
 	if err := json.NewDecoder(r.Body).Decode(&item); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -54,10 +68,12 @@ func (s *Server) CreateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 }
 
 func getId(r *http.Request) (int, error) {
@@ -70,7 +86,7 @@ func getId(r *http.Request) (int, error) {
 }
 
 func (s *Server) UpdateHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+	//w.Header().Set("Content-Type", "application/json")
 	id, err := getId(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -86,12 +102,12 @@ func (s *Server) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("{}"))
+	w.WriteHeader(http.StatusAccepted)
+	//w.Write([]byte("{}"))
 }
 
 func (s *Server) DeleteHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+	//w.Header().Set("Content-Type", "application/json")
 	id, err := getId(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -102,16 +118,39 @@ func (s *Server) DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("{}"))
+	w.WriteHeader(http.StatusAccepted)
+	//w.Write([]byte("{}"))
+}
+
+func (s *Server) CompleteHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	id, err := getId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	var execution Execution
+	if err := json.NewDecoder(r.Body).Decode(&execution); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = s.ChoreStorage.Complete(id, &execution)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
+	//w.Write([]byte("{}"))
 }
 
 func (s *Server) GetHandler() http.Handler {
 	srv := http.NewServeMux()
 	srv.HandleFunc("GET /api/chore", s.ListHandler)
+	srv.HandleFunc("GET /api/chores", s.TodoListHandler)
 	srv.HandleFunc("GET /api/chore/{id}", s.ItemHandler)
 	srv.HandleFunc("POST /api/chore", s.CreateHandler)
 	srv.HandleFunc("PUT /api/chore/{id}", s.UpdateHandler)
+	srv.HandleFunc("PATCH /api/chore/{id}", s.CompleteHandler)
 	srv.HandleFunc("DELETE /api/chore/{id}", s.DeleteHandler)
 	return srv
 }
